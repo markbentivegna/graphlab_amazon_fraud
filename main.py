@@ -1,3 +1,5 @@
+import pickle as pkl
+
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 import pyspark.sql.types as T
@@ -8,6 +10,7 @@ instruments_reviews= "reviews_Musical_Instruments.json"
 meta_filename = f"{SOURCE}/Category/{instruments_meta}"
 review_filename = f"{SOURCE}/Category/{instruments_reviews}"
 
+reviewer_file = f"{SOURCE}/reviewer_set.txt"
 
 spark = SparkSession.builder.config("spark.executor.memory", "128g") \
 .config("spark.driver.memory", "128g") \
@@ -15,8 +18,14 @@ spark = SparkSession.builder.config("spark.executor.memory", "128g") \
 .config("spark.memory.offHeap.enabled",True) \
 .appName("graphlab_amazon_fraud").getOrCreate()
 
+reviewers_list = []
+with open(reviewer_file,'rb') as f:
+   reviewer_set = pkl.load(f)
+   reviewers_list = list(reviewer_set)
+
 meta_df = spark.read.json(meta_filename)
 review_df = spark.read.json(review_filename)
+review_df = review_df.filter(review_df.reviewerID.isin(reviewers_list))
 
 equals_zero = lambda e: e == 0
 # review_df = review_df.withColumn("drop", F.exists(F.col("helpful"), equals_zero)) \
